@@ -127,7 +127,7 @@ def classify(ds_url, random_state, train_size_normal, train_size_anomalous, filt
         step_list.append(StandardScaler())
     if use_normalizer:
         step_list.append(Normalizer())
-    clf_kwargs.setdefault('random_state', 0)        # for reproducibility of the results
+    #clf_kwargs.setdefault('random_state', 0)        # for reproducibility of the results
     step_list.append(OneClassSVM(**clf_kwargs))
     clf = make_pipeline(*step_list)
     clf.fit(X_train, y_train_true)
