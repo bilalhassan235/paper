@@ -15,6 +15,7 @@ from sklearn.svm import OneClassSVM
 from typing import List, Tuple
 from ..base import BASE_PATH
 from .. import data_sets, feature_extraction as fe
+from sklearn import metrics
 
 
 _file_memory = joblib.Memory(cachedir=os.path.join(BASE_PATH, 'cache'))
@@ -63,7 +64,7 @@ def result_list_to_df(result_list: List) -> pd.DataFrame:
         'TOTAL_POPULATION',
         'P', 'TP', 'FN', 'TPR', 'FNR',
         'N', 'TN', 'FP', 'TNR', 'FPR',
-        'f_score',
+        'f_score','accuracy'
     ]
     column_headers = np.array(column_headers_1 + column_headers_2)
 
@@ -110,6 +111,8 @@ def result_list_to_df(result_list: List) -> pd.DataFrame:
     df['f_score'] = ((2 * df['TP']) / (2 * df['TP'] + df['FP'] + df['FN'])).map(
         lambda x: 0 if np.isnan(x) else round(x, 2))
 
+    df['accuracy']=(df['TP'] + df['TN'])/ (df['TP'] +df['TN'] + df['FP'] + df['FN'])
+
     return df.loc[:, column_headers]
 
 
@@ -131,7 +134,7 @@ def classify(ds_url, random_state, train_size_normal, train_size_anomalous, filt
     step_list.append(OneClassSVM(**clf_kwargs))
     clf = make_pipeline(*step_list)
     clf.fit(X_train, y_train_true)
-
+    
     # add column with predicted labels
     df.loc[df[fe.META_GROUP] == 'train', fe.META_PRED_LABEL] = clf.predict(X_train)
     df.loc[df[fe.META_GROUP] == 'test', fe.META_PRED_LABEL] = clf.predict(X_test)
@@ -167,10 +170,9 @@ def do_one_class(random_state, train_size_normal, train_size_anomalous, filter_c
                 df_list.append(res_df)
 
     df = pd.concat(df_list)         # type: pd.DataFrame
-
     df_list = []
     for ds_url, sub_df in df.groupby(['ds_url', ]):
-        best_row = sub_df.sort_values(['f_score', 'TPR'], ascending=False).iloc[:1, :]
+        best_row = sub_df.sort_values(['f_score', 'TPR','accuracy'], ascending=False).iloc[:1, :]
         df_list.append(best_row)
 
     df = pd.concat(df_list)         # type: pd.DataFrame
@@ -178,7 +180,7 @@ def do_one_class(random_state, train_size_normal, train_size_anomalous, filter_c
 
 
 def run():
-    random_state = 2
+    random_state = 3
     train_size_normal = 500
     train_size_anomalous = 0
 
@@ -213,23 +215,26 @@ def run():
             use_scaler=scenario['scaler_normalizer'],
             use_normalizer=scenario['scaler_normalizer'])
         scenario['df'] = df
+        
 
-    cols = ['n_features', 'nu', 'gamma', 'TPR', 'FPR', 'f_score']
+    cols = ['n_features', 'nu', 'gamma', 'TPR', 'FPR', 'f_score','accuracy']
     for scenario in scenario_list:
         print()
         print(scenario['label'], '| scaler_normalizer', scenario['scaler_normalizer'])
         print(scenario['df'].loc[:, cols])
 
     print()
-    print('{:40s} | {:25s} | {:45s} | {:25s}'.format(
-        '', 'scaler and normalizer', 'average of all 18 groups', 'best of all 18 groups'))
-    print('{:40s} | {:25s} | {:13s} | {:13s} | {:13s} | {:25s}'.format(
-        '', '', 'TPR', 'FPR', 'f1-score', 'f1-score'))
+    print('{:40s} | {:25s} | {:45s} | {:25s} | {:45s} | {:25s}'.format(
+        '', 'scaler and normalizer', 'average of all 18 groups', 'best of all 18 groups', 'average of all 18 groups', 'best of all 18 groups'))
+    print('{:40s} | {:25s} | {:13s} | {:13s} | {:13s} | {:25s} | {:13s} | {:25s}'.format(
+        '', '', 'TPR', 'FPR', 'f1-score', 'f1-score','accuracy','accuracy'))
     for scenario in scenario_list:
-        print('{:40s} | {:25s} | {:4.2f} +/- {:4.2f} | {:4.2f} +/- {:4.2f} | {:4.2f} +/- {:4.2f} | {:25.2f}'.format(
+        print('{:40s} | {:25s} | {:4.2f} +/- {:4.2f} | {:4.2f} +/- {:4.2f} | {:4.2f} +/- {:4.2f} | {:25.2f} | {:25.2f}| {:25.2f}'.format(
             scenario['label'],
             str(scenario['scaler_normalizer']),
             scenario['df']['TPR'].mean(), scenario['df']['TPR'].std(),
             scenario['df']['FPR'].mean(), scenario['df']['FPR'].std(),
             scenario['df']['f_score'].mean(), scenario['df']['f_score'].std(),
-            scenario['df']['f_score'].max()))
+            scenario['df']['f_score'].max(),scenario['df']['accuracy'].mean(),scenario['df']['accuracy'].max()))
+        
+            
