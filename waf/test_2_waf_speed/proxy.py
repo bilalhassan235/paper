@@ -38,7 +38,7 @@ import time
 import sys
 from http import client
 from urllib import parse
-from cherrypy.wsgiserver import CherryPyWSGIServer
+from cheroot.wsgi import Server as CherryPyWSGIServer
 
 
 # supported methods and schemes
