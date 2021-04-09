@@ -10,8 +10,8 @@ from . import csic, torpeda
 from .base import Request, read_and_group_requests
 
 
-DS_URL_LIST = csic.DS_URL_LIST + torpeda.DS_URL_LIST
-
+# DS_URL_LIST = csic.DS_URL_LIST + torpeda.DS_URL_LIST
+DS_URL_LIST = csic.DS_URL_LIST
 
 _in_memory_cache = {}
 
